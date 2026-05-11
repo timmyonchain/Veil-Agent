@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VEIL — Private Payment Rails for AI Agents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --cyan: #00f5d4;
+    --green: #00ff88;
+    --red: #ff3366;
+    --dim: #0a3d2e;
+    --bg: #050a08;
+    --bg2: #080f0c;
+    --border: rgba(0,245,212,0.15);
+    --text: #b0ffe8;
+    --muted: #3a7a66;
+    --mono: 'JetBrains Mono', 'Share Tech Mono', monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* SCANLINE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* MATRIX CANVAS */
+  #matrix {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    opacity: 0.04;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    background: rgba(5,10,8,0.9);
+    backdrop-filter: blur(8px);
+  }
+
+  .nav-logo {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  .nav-logo span {
+    color: var(--muted);
+    font-weight: 300;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    display: block;
+    margin-top: -2px;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--cyan); }
+
+  .nav-cta {
+    background: transparent;
+    border: 1px solid var(--cyan);
+    color: var(--cyan) !important;
+    padding: 6px 16px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: background 0.2s, color 0.2s;
+    text-decoration: none;
+  }
+  .nav-cta:hover { background: var(--cyan); color: var(--bg) !important; }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 8rem 2rem 4rem;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(0,245,212,0.3);
+    padding: 4px 14px;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--cyan);
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+  }
+
+  .dot {
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .ascii-logo {
+    font-size: clamp(10px, 1.8vw, 18px);
+    line-height: 1.2;
+    color: var(--cyan);
+    margin-bottom: 1.5rem;
+    white-space: pre;
+    text-shadow: 0 0 20px rgba(0,245,212,0.4);
+    letter-spacing: 0.05em;
+  }
+
+  .hero-subtitle {
+    font-size: clamp(13px, 2vw, 16px);
+    color: var(--muted);
+    max-width: 600px;
+    margin-bottom: 2.5rem;
+    line-height: 1.8;
+  }
+
+  .hero-subtitle strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .typewriter {
+    color: var(--green);
+    font-size: clamp(14px, 2.5vw, 20px);
+    margin-bottom: 1rem;
+    min-height: 1.5em;
+  }
+
+  .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--cyan);
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: blink 0.8s steps(1) infinite;
+  }
+
+  @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn-primary {
+    background: var(--cyan);
+    color: var(--bg);
+    border: none;
+    padding: 12px 28px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    transition: box-shadow 0.2s, transform 0.1s;
+  }
+  .btn-primary:hover {
+    box-shadow: 0 0 20px rgba(0,245,212,0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 12px 28px;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* TERMINAL WINDOW */
+  .terminal-wrap {
+    position: relative;
+    z-index: 1;
+    padding: 0 2rem 6rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  .terminal {
+    width: 100%;
+    max-width: 760px;
+    background: #030806;
+    border: 1px solid var(--border);
+    box-shadow: 0 0 60px rgba(0,245,212,0.06);
+  }
+
+  .terminal-bar {
+    background: #0c1a14;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .t-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .t-dot.r { background: #ff5f57; }
+  .t-dot.y { background: #febc2e; }
+  .t-dot.g { background: #28c840; }
+
+  .terminal-title {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .terminal-body {
+    padding: 1.5rem;
+    font-size: 13px;
+    line-height: 1.9;
+  }
+
+  .t-line { display: flex; gap: 8px; margin-bottom: 2px; }
+  .t-prompt { color: var(--green); flex-shrink: 0; }
+  .t-cmd { color: var(--text); }
+  .t-comment { color: var(--muted); }
+  .t-output { color: var(--cyan); padding-left: 20px; }
+  .t-error { color: var(--red); padding-left: 20px; }
+  .t-success { color: var(--green); padding-left: 20px; }
+  .t-gap { height: 0.6rem; }
+
+  /* SECTIONS */
+  section {
+    position: relative;
+    z-index: 1;
+    padding: 5rem 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 0.5rem;
+  }
+
+  .section-label::before {
+    content: '// ';
+    color: var(--muted);
+  }
+
+  h2 {
+    font-size: clamp(20px, 3vw, 28px);
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    letter-spacing: -0.01em;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    margin: 0 auto;
+    max-width: 1000px;
+  }
+
+  /* PROBLEM SECTION */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+
+  .prob-card {
+    background: var(--bg2);
+    padding: 2rem;
+  }
+
+  .prob-icon {
+    font-size: 24px;
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .prob-card h3 {
+    color: var(--red);
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .prob-card p {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  /* COMPARISON TABLE */
+  .compare-wrap {
+    margin-top: 3rem;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .compare-header {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1.5fr;
+    background: #0c1a14;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .compare-header div {
+    padding: 12px 20px;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .compare-header .col-exposed { color: var(--red); }
+  .compare-header .col-shielded { color: var(--green); }
+
+  .compare-row {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1.5fr;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .compare-row:last-child { border-bottom: none; }
+  .compare-row:hover { background: rgba(0,245,212,0.03); }
+
+  .compare-row div {
+    padding: 14px 20px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .compare-row .label { color: var(--muted); }
+  .exposed { color: var(--red); }
+  .shielded { color: var(--green); }
+
+  /* HOW IT WORKS */
+  .steps {
+    margin-top: 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    border: 1px solid var(--border);
+    border-bottom: none;
+  }
+  .step:last-child { border-bottom: 1px solid var(--border); }
+
+  .step-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--cyan);
+    border-right: 1px solid var(--border);
+    background: rgba(0,245,212,0.03);
+    letter-spacing: 0.1em;
+  }
+
+  .step-content {
+    padding: 1.5rem 2rem;
+  }
+
+  .step-content h3 {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+  }
+
+  .step-content p {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  .step-content code {
+    color: var(--cyan);
+    background: rgba(0,245,212,0.08);
+    padding: 1px 6px;
+    font-size: 12px;
+  }
+
+  /* TECH STACK */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+
+  .tech-card {
+    background: var(--bg2);
+    padding: 1.5rem;
+  }
+
+  .tech-card .label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .tech-card .value {
+    color: var(--cyan);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .tech-card .desc {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 0.3rem;
+    line-height: 1.6;
+  }
+
+  /* CTA SECTION */
+  .cta-section {
+    text-align: center;
+    padding: 6rem 2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cta-box {
+    max-width: 600px;
+    margin: 0 auto;
+    border: 1px solid var(--border);
+    padding: 4rem 3rem;
+    background: var(--bg2);
+    position: relative;
+  }
+
+  .cta-box::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background: linear-gradient(135deg, rgba(0,245,212,0.15), transparent, rgba(0,245,212,0.05));
+    pointer-events: none;
+  }
+
+  .cta-box h2 { margin-bottom: 1rem; }
+  .cta-box p { color: var(--muted); font-size: 13px; margin-bottom: 2rem; line-height: 1.8; }
+
+  /* FOOTER */
+  footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: gap;
+    gap: 1rem;
+  }
+
+  .footer-left {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  .footer-left strong { color: var(--cyan); }
+
+  .footer-right {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  /* GLITCH ANIMATION */
+  @keyframes glitch {
+    0%, 95%, 100% { text-shadow: 0 0 20px rgba(0,245,212,0.4); clip-path: none; }
+    96% { text-shadow: -2px 0 var(--red), 2px 0 var(--green); clip-path: inset(20% 0 50% 0); }
+    97% { text-shadow: 2px 0 var(--red), -2px 0 var(--green); clip-path: inset(60% 0 10% 0); }
+    98% { text-shadow: -2px 0 var(--red), 2px 0 var(--green); clip-path: inset(40% 0 30% 0); }
+  }
+
+  .ascii-logo { animation: glitch 8s ease-in-out infinite; }
+
+  /* SCROLL FADE IN */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .fade-in.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<nav>
+  <div class="nav-logo">
+    VEIL
+    <span>Private Payment Rails</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#tech">Tech</a></li>
+    <li><a href="https://github.com/timmyonchain/Veil-Agent" target="_blank" class="nav-cta">GitHub ↗</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">
+    <div class="dot"></div>
+    Live on Solana Devnet · Colosseum Frontier Hackathon
+  </div>
+
+  <pre class="ascii-logo">
+██╗   ██╗███████╗██╗██╗     
+██║   ██║██╔════╝██║██║     
+██║   ██║█████╗  ██║██║     
+╚██╗ ██╔╝██╔══╝  ██║██║     
+ ╚████╔╝ ███████╗██║███████╗
+  ╚═══╝  ╚══════╝╚═╝╚══════╝</pre>
+
+  <div class="typewriter" id="typewriter">&nbsp;<span class="cursor"></span></div>
+
+  <p class="hero-subtitle">
+    AI agents are <strong>leaking your strategy on-chain</strong>.<br>
+    Every data purchase, every signal, every API call — fully visible.<br>
+    Veil routes payments through MagicBlock's <strong>Private Ephemeral Rollup</strong> so competitors see nothing.
+  </p>
+
+  <div class="hero-actions">
+    <a href="https://github.com/timmyonchain/Veil-Agent" target="_blank" class="btn-primary">View on GitHub</a>
+    <a href="#how" class="btn-ghost">How it works →</a>
+  </div>
+</div>
+
+<!-- TERMINAL DEMO -->
+<div class="terminal-wrap fade-in">
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="t-dot r"></div>
+      <div class="t-dot y"></div>
+      <div class="t-dot g"></div>
+      <div class="terminal-title">veil-agent — node agent/index.js</div>
+    </div>
+    <div class="terminal-body">
+      <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd">node agent/index.js</span></div>
+      <div class="t-gap"></div>
+      <div class="t-line"><span class="t-output">🔑 Agent wallet: 4XdMJXryxg6KTLzQnumY...</span></div>
+      <div class="t-line"><span class="t-output">🔐 Connecting to Private Ephemeral Rollup...</span></div>
+      <div class="t-line"><span class="t-success">✅ Authenticated with MagicBlock PER</span></div>
+      <div class="t-gap"></div>
+      <div class="t-line"><span class="t-comment">// [3] Simulating PUBLIC payment (no Veil)</span></div>
+      <div class="t-line"><span class="t-error">⚠  PUBLIC: Sent 0.01 USDC to DemoApiWallet — VISIBLE to all chain observers</span></div>
+      <div class="t-line"><span class="t-error">   Sender: 4XdMJX...  Recipient: DemoApi...  Amount: 0.01 USDC  Strategy: EXPOSED</span></div>
+      <div class="t-gap"></div>
+      <div class="t-line"><span class="t-comment">// [4] Shielded payment via Veil + PER</span></div>
+      <div class="t-line"><span class="t-output">📦 Building deposit tx (base chain → PER)...</span></div>
+      <div class="t-line"><span class="t-success">✅ Deposit tx signed — ARKVqqe5+nsWKzYT6L...</span></div>
+      <div class="t-line"><span class="t-output">🔒 Building private transfer inside PER...</span></div>
+      <div class="t-line"><span class="t-success">🛡  Payment shielded — recipient and amount hidden from chain observers</span></div>
+      <div class="t-line"><span class="t-success">   Sender: [encrypted]  Recipient: [encrypted]  Amount: [encrypted]  Strategy: PROTECTED ✅</span></div>
+      <div class="t-gap"></div>
+      <div class="t-line"><span class="t-success">📊 Signal received: BUY SOL @ 87% confidence | $168.4 target | 4h</span></div>
+      <div class="t-line"><span class="t-output">🔄 Stealth session rotated — new ephemeral pubkey: EAsw5ST...</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- PROBLEM -->
+<section id="problem" class="fade-in">
+  <div class="section-label">The Problem</div>
+  <h2>Your AI agent is an open book</h2>
+  <p style="color: var(--muted); max-width: 600px;">AI agents are now autonomous economic actors. But every payment they make is fully public on Solana. Anyone watching the chain can surveil your entire strategy.</p>
+
+  <div class="problem-grid">
+    <div class="prob-card">
+      <span class="prob-icon">👁️</span>
+      <h3>Recipient Exposed</h3>
+      <p>Competitors see exactly which data APIs, signal providers, and services your agent is paying for — and copy your sources.</p>
+    </div>
+    <div class="prob-card">
+      <span class="prob-icon">💸</span>
+      <h3>Amount Exposed</h3>
+      <p>Payment amounts reveal how much you value each signal. Competitors can infer your conviction and position sizing.</p>
+    </div>
+    <div class="prob-card">
+      <span class="prob-icon">📈</span>
+      <h3>Frequency Exposed</h3>
+      <p>How often you buy data reveals your trading cadence. Attackers can front-run your agent's predictable behavior.</p>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARISON -->
+<section class="fade-in" style="padding-top: 0;">
+  <div class="section-label">The Fix</div>
+  <h2>Veil shields everything</h2>
+
+  <div class="compare-wrap">
+    <div class="compare-header">
+      <div style="color: var(--muted);">Data Point</div>
+      <div class="col-exposed">Without Veil</div>
+      <div class="col-shielded">With Veil + PER</div>
+    </div>
+    <div class="compare-row">
+      <div class="label">Recipient</div>
+      <div class="exposed">⚠ Exposed on-chain</div>
+      <div class="shielded">🔒 Encrypted in PER</div>
+    </div>
+    <div class="compare-row">
+      <div class="label">Amount</div>
+      <div class="exposed">⚠ Exposed on-chain</div>
+      <div class="shielded">🔒 Encrypted in PER</div>
+    </div>
+    <div class="compare-row">
+      <div class="label">Frequency</div>
+      <div class="exposed">⚠ Fully trackable</div>
+      <div class="shielded">🔒 Not determinable</div>
+    </div>
+    <div class="compare-row">
+      <div class="label">Agent Identity</div>
+      <div class="exposed">⚠ Static wallet</div>
+      <div class="shielded">🔒 Rotated per session</div>
+    </div>
+    <div class="compare-row">
+      <div class="label">Strategy Risk</div>
+      <div class="exposed" style="color: var(--red); font-weight: 700;">HIGH — strategy copied</div>
+      <div class="shielded" style="color: var(--green); font-weight: 700;">ELIMINATED</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="fade-in">
+  <div class="section-label">Architecture</div>
+  <h2>How Veil works</h2>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-content">
+        <h3>Authenticate with PER</h3>
+        <p>Agent signs a challenge string via <code>GET /challenge</code>, exchanges it for a bearer token via <code>POST /login</code>. Session keys are ephemeral and rotated after every payment cycle.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-content">
+        <h3>Deposit into Private Ephemeral Rollup</h3>
+        <p>USDC moves from Solana base chain into MagicBlock's TEE-backed PER via <code>POST /deposit</code>. Inside the rollup, all state is shielded from external observers.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-content">
+        <h3>Private transfer inside PER</h3>
+        <p><code>POST /transfer</code> with <code>visibility: private</code> — recipient, amount, and memo never appear on base chain. The API returns an unsigned tx, signed locally by the agent keypair.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-content">
+        <h3>Payment proof → API access</h3>
+        <p>The signed tx hash becomes a payment proof token. The data API validates <code>x-payment-proof</code> and returns the signal. No payment, no data — gating works without revealing the payer.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">05</div>
+      <div class="step-content">
+        <h3>Stealth session rotation</h3>
+        <p>After each cycle, Veil generates a fresh ephemeral keypair and re-authenticates under a new identity. Chain observers see disconnected sessions — impossible to link as the same agent.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- TECH -->
+<section id="tech" class="fade-in">
+  <div class="section-label">Stack</div>
+  <h2>Built with</h2>
+
+  <div class="tech-grid">
+    <div class="tech-card">
+      <div class="label">Privacy Layer</div>
+      <div class="value">MagicBlock PER</div>
+      <div class="desc">Private Ephemeral Rollup — Intel TDX TEE-backed shielded state on Solana</div>
+    </div>
+    <div class="tech-card">
+      <div class="label">Payment Protocol</div>
+      <div class="value">x402 + PER API</div>
+      <div class="desc">HTTP-native micropayments wrapped with shielded transfer proofs</div>
+    </div>
+    <div class="tech-card">
+      <div class="label">Blockchain</div>
+      <div class="value">Solana Devnet</div>
+      <div class="desc">Sub-50ms execution, full composability, USDC native</div>
+    </div>
+    <div class="tech-card">
+      <div class="label">SDK</div>
+      <div class="value">@solana/web3.js</div>
+      <div class="desc">Keypair generation, tx signing, devnet RPC integration</div>
+    </div>
+    <div class="tech-card">
+      <div class="label">Track</div>
+      <div class="value">Privacy — Frontier</div>
+      <div class="desc">Colosseum Hackathon · MagicBlock + ST MY + SNS</div>
+    </div>
+    <div class="tech-card">
+      <div class="label">Novel Primitive</div>
+      <div class="value">Stealth Sessions</div>
+      <div class="desc">Per-payment ephemeral identity rotation — agents become unlinkable</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section fade-in">
+  <div class="cta-box">
+    <div class="section-label" style="text-align:center; margin-bottom: 1rem;">Open Source</div>
+    <h2>Run it yourself</h2>
+    <p>Clone the repo, start the mock API, run the agent. Full demo in under 60 seconds — no mainnet funds required.</p>
+    <div style="background: #030806; border: 1px solid var(--border); padding: 1.2rem 1.5rem; margin-bottom: 2rem; text-align: left; font-size: 13px; line-height: 2;">
+      <div><span style="color: var(--muted)">$</span> <span style="color: var(--cyan)">git clone</span> <span style="color: var(--text)">https://github.com/timmyonchain/Veil-Agent</span></div>
+      <div><span style="color: var(--muted)">$</span> <span style="color: var(--cyan)">npm install</span></div>
+      <div><span style="color: var(--muted)">$</span> <span style="color: var(--cyan)">node mock-api/server.js</span> <span style="color: var(--muted)"># terminal 1</span></div>
+      <div><span style="color: var(--muted)">$</span> <span style="color: var(--cyan)">node agent/index.js</span> <span style="color: var(--muted)"> # terminal 2</span></div>
+    </div>
+    <a href="https://github.com/timmyonchain/Veil-Agent" target="_blank" class="btn-primary">View on GitHub ↗</a>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-left">
+    <strong>VEIL</strong> — Privacy Layer for AI Agent Commerce<br>
+    Powered by MagicBlock Private Ephemeral Rollups · Intel TDX
+  </div>
+  <div class="footer-right">
+    Colosseum Frontier Hackathon 2026<br>
+    Privacy Track · @timmyonchain
+  </div>
+</footer>
+
+<script>
+// MATRIX RAIN
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+let cols, drops;
+
+function initMatrix() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  cols = Math.floor(canvas.width / 20);
+  drops = Array(cols).fill(1);
+}
+
+function drawMatrix() {
+  ctx.fillStyle = 'rgba(5,10,8,0.05)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#00f5d4';
+  ctx.font = '14px JetBrains Mono, monospace';
+  const chars = '01アイウエオカキクケコヴeil01シールド10';
+  drops.forEach((y, i) => {
+    const ch = chars[Math.floor(Math.random() * chars.length)];
+    ctx.fillText(ch, i * 20, y * 20);
+    if (y * 20 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  });
+}
+
+initMatrix();
+window.addEventListener('resize', initMatrix);
+setInterval(drawMatrix, 60);
+
+// TYPEWRITER
+const phrases = [
+  'shield your agent\'s payments_',
+  'hide recipient, amount, frequency_',
+  'rotate stealth sessions_',
+  'eliminate strategy surveillance_',
+  'built on MagicBlock PER_',
+];
+let pi = 0, ci = 0, deleting = false;
+const tw = document.getElementById('typewriter');
+
+function type() {
+  const phrase = phrases[pi];
+  if (!deleting) {
+    ci++;
+    tw.innerHTML = phrase.slice(0, ci) + '<span class="cursor"></span>';
+    if (ci === phrase.length) { deleting = true; setTimeout(type, 2000); return; }
+  } else {
+    ci--;
+    tw.innerHTML = phrase.slice(0, ci) + '<span class="cursor"></span>';
+    if (ci === 0) { deleting = false; pi = (pi + 1) % phrases.length; }
+  }
+  setTimeout(type, deleting ? 35 : 70);
+}
+type();
+
+// SCROLL FADE IN
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
