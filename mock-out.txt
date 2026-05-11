@@ -1,0 +1,7 @@
+
+🌐 Mock Data API running on http://localhost:3001
+   Endpoints: GET /market-signal  GET /price-feed
+   Requires: x-payment-proof header
+
+[2026-05-11T00:04:30.730Z] GET /market-signal — ⛔ NO PROOF
+[2026-05-11T00:04:31.838Z] GET /market-signal — ✅ PAID

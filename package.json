@@ -1,0 +1,20 @@
+{
+  "name": "veil",
+  "version": "1.0.0",
+  "description": "Privacy middleware layer for AI agent commerce on Solana using MagicBlock PER",
+  "type": "module",
+  "scripts": {
+    "start:mock": "node mock-api/server.js",
+    "start:agent": "node agent/index.js",
+    "start:demo": "node demo/surveillance.js"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.95.4",
+    "bs58": "^6.0.0",
+    "chalk": "^5.3.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "node-fetch": "^3.3.2",
+    "tweetnacl": "^1.0.3"
+  }
+}
